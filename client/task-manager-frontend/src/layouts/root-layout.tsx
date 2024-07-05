@@ -19,7 +19,7 @@ export default function RootLayout() {
       <header className="header">
         <div>
           <div>
-            <p>Task Manager</p>
+            <p>Task Manager - RootLayout component</p>
           </div>
           <SignedIn>
             <UserButton afterSignOutUrl='/sign-in' />
