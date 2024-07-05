@@ -4,9 +4,9 @@ const authMiddleware = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-router.post('/tasks', authMiddleware, createTask);
-router.get('/tasks', authMiddleware, getTasks);
-router.put('/tasks/:id', authMiddleware, updateTask);
-router.delete('/tasks/:id', authMiddleware, deleteTask);
+router.post('/tasks' ,createTask);
+router.get('/tasks',getTasks);
+router.put('/tasks/:id' ,updateTask);
+router.delete('/tasks/:id', deleteTask);
 
 module.exports = router;

@@ -1,16 +1,17 @@
 const Task = require('../models/Task');
 
 const createTask = async (req, res) => {
-  const { name, description, dueDate, priority, status, collaborators, viewers } = req.body;
-
+  console.log(req.body,res)
   try {
+    const { name,creatorEmail, description, dueDate, priority, status, collaborators, viewers } = req.body;
+
     const task = new Task({
       name,
       description,
       dueDate,
       priority,
       status,
-      creatorEmail: req.user.email,
+      creatorEmail: creatorEmail,
       collaborators,
       viewers,
     });
@@ -21,24 +22,22 @@ const createTask = async (req, res) => {
 
     res.status(201).json(task);
   } catch (error) {
-    res.status(500).json({ message: 'Error creating task', error });
+    console.error(error); // Log the error for debugging
+    res.status(500).json({ message: 'Error creating task', error: error.message });
   }
 };
 
+
 const getTasks = async (req, res) => {
+  console.log('get api');
   try {
-    const tasks = await Task.find({
-      $or: [
-        { creatorEmail: req.user.email },
-        { collaborators: req.user.email },
-        { viewers: req.user.email }
-      ]
-    });
+    const tasks = await Task.find({});
     res.status(200).json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tasks', error });
   }
 };
+
 
 const updateTask = async (req, res) => {
   const { id } = req.params;

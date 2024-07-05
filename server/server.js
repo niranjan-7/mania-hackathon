@@ -20,13 +20,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/api', taskRoutes);
 
-io.on('connection', (socket) => {
-  console.log('a user connected');
+// io.on('connection', (socket) => {
+//   console.log('a user connected');
 
-  socket.on('disconnect', () => {
-    console.log('user disconnected');
-  });
-});
+//   socket.on('disconnect', () => {
+//     console.log('user disconnected');
+//   });
+// });
 
 const PORT = process.env.PORT || 5000;
 
