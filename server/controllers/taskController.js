@@ -1,9 +1,8 @@
 const Task = require('../models/Task');
 
 const createTask = async (req, res) => {
-  console.log(req.body,res)
   try {
-    const { name,creatorEmail, description, dueDate, priority, status, collaborators, viewers } = req.body;
+    const { name, creatorEmail, description, dueDate, priority, status, collaborators, viewers } = req.body;
 
     const task = new Task({
       name,
@@ -11,7 +10,7 @@ const createTask = async (req, res) => {
       dueDate,
       priority,
       status,
-      creatorEmail: creatorEmail,
+      creatorEmail,
       collaborators,
       viewers,
     });
@@ -22,14 +21,12 @@ const createTask = async (req, res) => {
 
     res.status(201).json(task);
   } catch (error) {
-    console.error(error); // Log the error for debugging
+    console.error('Error creating task:', error);
     res.status(500).json({ message: 'Error creating task', error: error.message });
   }
 };
 
-
 const getTasks = async (req, res) => {
-  console.log('get api');
   try {
     const tasks = await Task.find({});
     res.status(200).json(tasks);
@@ -38,6 +35,21 @@ const getTasks = async (req, res) => {
   }
 };
 
+const getTaskById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const task = await Task.findById(id);
+
+    if (!task) {
+      return res.status(404).json({ message: 'Task not found' });
+    }
+
+    res.status(200).json(task);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching task', error });
+  }
+};
 
 const updateTask = async (req, res) => {
   const { id } = req.params;
@@ -48,10 +60,6 @@ const updateTask = async (req, res) => {
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
-    }
-
-    if (task.creatorEmail !== req.user.email && !task.collaborators.includes(req.user.email)) {
-      return res.status(403).json({ message: 'Permission denied' });
     }
 
     task.name = name;
@@ -65,11 +73,12 @@ const updateTask = async (req, res) => {
 
     await task.save();
 
-    req.app.get('io').emit('taskUpdated', task); 
+    req.app.get('io').emit('taskUpdated', task);
 
     res.status(200).json(task);
   } catch (error) {
-    res.status(500).json({ message: 'Error updating task', error });
+    console.error('Error updating task:', error);
+    res.status(500).json({ message: 'Error updating task', error: error.message });
   }
 };
 
@@ -83,13 +92,9 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    if (task.creatorEmail !== req.user.email) {
-      return res.status(403).json({ message: 'Permission denied' });
-    }
-
     await task.remove();
 
-    req.app.get('io').emit('taskDeleted', task); 
+    req.app.get('io').emit('taskDeleted', task);
 
     res.status(200).json({ message: 'Task deleted' });
   } catch (error) {
@@ -100,6 +105,7 @@ const deleteTask = async (req, res) => {
 module.exports = {
   createTask,
   getTasks,
+  getTaskById,
   updateTask,
   deleteTask,
 };

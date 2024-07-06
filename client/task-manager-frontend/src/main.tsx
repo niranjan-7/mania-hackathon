@@ -8,6 +8,9 @@ import DashboardLayout from './layouts/dashboard-layout'
 import IndexPage from './routes'
 import SignInPage from './routes/sign-in'
 import DashboardPage from './routes/dashboard'
+import CreateTask from './components/CreateTask'
+import TaskDetail from './components/TaskDetail'
+import EditTask from './components/EditTask'
 
 const router = createBrowserRouter([
   {
@@ -19,7 +22,10 @@ const router = createBrowserRouter([
         element: <DashboardLayout />,
         path: "dashboard",
         children: [
-          { path: "/dashboard", element: <DashboardPage /> },
+          { path: "/dashboard/tasks", element: <DashboardPage /> },
+          { path: "/dashboard/tasks/:taskId", element: <TaskDetail /> },
+          { path: "/dashboard/tasks/edit/:taskId", element: <EditTask /> },
+          {path: "/dashboard/create-task", element: <CreateTask />}
         ]
       }
     ]

@@ -1,60 +1,85 @@
-import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-// import io from 'socket.io-client';
+import React, { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
 
 interface Task {
-  id: string;
+  _id: string;
   name: string;
   description: string;
-  dueDate: string;
+  dueDate: string; // Assuming dueDate is a string, adjust as per your schema
   priority: string;
   status: string;
+  creatorEmail: string;
   collaborators: string[];
   viewers: string[];
 }
 
-const TaskList: React.FC = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-//   const socket = io();
+const TaskDetail: React.FC = () => {
+  const { taskId } = useParams<{ taskId: string }>(); // Extracts taskId from URL params
+  const [task, setTask] = useState<Task | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null >(null);
 
   useEffect(() => {
-    fetch('/api/tasks')
-      .then(response => response.json())
-      .then(data => {
-        setTasks(data);
-      });
+    const fetchTask = async () => {
+      try {
+        const response = await fetch(`http://localhost:5000/api/tasks/${taskId}`); // Adjust API endpoint as per your backend
+        if (!response.ok) {
+          throw new Error('Failed to fetch task');
+        }
+        const taskData: Task = await response.json();
+        setTask(taskData);
+      } catch (error:any) {
+        console.error('Error fetching task:', error);
+        setError(error.message);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // socket.on('taskCreated', (task: Task) => {
-    //   setTasks(prevTasks => [...prevTasks, task]);
-    // });
+    fetchTask();
+  }, [taskId]);
 
-    // socket.on('taskUpdated', (updatedTask: Task) => {
-    //   setTasks(prevTasks =>
-    //     prevTasks.map(task => (task.id === updatedTask.id ? updatedTask : task))
-    //   );
-    // });
+  if (loading) {
+    return <p>Loading task...</p>;
+  }
 
-    // socket.on('taskDeleted', (deletedTask: Task) => {
-    //   setTasks(prevTasks => prevTasks.filter(task => task.id !== deletedTask.id));
-    // });
-
-    // return () => {
-    //   socket.disconnect();
-    // };
-  }, []);
+  if (error) {
+    return <p>Error: {error}</p>;
+  }
 
   return (
-    <div className="task-list">
-      <h2>Tasks</h2>
-      <ul>
-        {tasks.map(task => (
-          <li key={task.id}>
-            <Link to={`/task/${task.id}`}>{task.name}</Link>
-          </li>
-        ))}
-      </ul>
+    <div>
+      <h2>Task Details</h2>
+      {task ? (
+        <div>
+          <p><strong>Name:</strong> {task.name}</p>
+          <p><strong>Description:</strong> {task.description}</p>
+          <p><strong>Due Date:</strong> {new Date(task.dueDate).toLocaleDateString()}</p>
+          <p><strong>Priority:</strong> {task.priority}</p>
+          <p><strong>Status:</strong> {task.status}</p>
+          <p><strong>Creator Email:</strong> {task.creatorEmail}</p>
+          <div>
+            <strong>Collaborators:</strong>
+            <ul>
+              {task.collaborators.map((collaborator, index) => (
+                <li key={index}>{collaborator}</li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <strong>Viewers:</strong>
+            <ul>
+              {task.viewers.map((viewer, index) => (
+                <li key={index}>{viewer}</li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : (
+        <p>Task not found</p>
+      )}
     </div>
   );
 };
 
-export default TaskList;
+export default TaskDetail;
