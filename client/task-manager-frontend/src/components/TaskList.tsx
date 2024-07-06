@@ -88,7 +88,7 @@ const TaskList: React.FC = () => {
                 <StyledLink to={`${task._id}`}>View</StyledLink>
               </td>
               <td>
-                <StyledLink to={`tasks/${task._id}`}>Edit</StyledLink>
+                <StyledLink to={`edit/${task._id}`}>Edit</StyledLink>
               </td>
             </tr>
           ))}

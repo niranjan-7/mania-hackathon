@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const mongoose = require('mongoose');
 
 const createTask = async (req, res) => {
   try {
@@ -83,22 +84,26 @@ const updateTask = async (req, res) => {
 };
 
 const deleteTask = async (req, res) => {
+  console.log('delete api');
   const { id } = req.params;
 
   try {
-    const task = await Task.findById(id);
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return res.status(400).json({ message: 'Invalid task ID' });
+    }
+
+    const task = await Task.findByIdAndDelete(id);
 
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    await task.remove();
-
     req.app.get('io').emit('taskDeleted', task);
 
     res.status(200).json({ message: 'Task deleted' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting task', error });
+    console.error('Error deleting task:', error); // Enhanced error logging
+    res.status(500).json({ message: 'Error deleting task', error: error.message });
   }
 };
 
