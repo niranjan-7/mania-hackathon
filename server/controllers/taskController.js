@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const Notification = require('../models/Notification');
 const mongoose = require('mongoose');
 
 const createTask = async (req, res) => {
@@ -13,12 +14,21 @@ const createTask = async (req, res) => {
       status,
       creatorEmail,
       collaborators,
-      viewers,
+      viewers
     });
 
     await task.save();
 
-    req.app.get('io').emit('taskCreated', task); // Emit event
+    const notification = new Notification({
+      userId: creatorEmail,
+      message: `Task "${task.name}" created`,
+      taskId: task._id,
+      users: [...collaborators, ...viewers]
+    });
+    await notification.save();
+
+    req.app.get('io').emit('taskCreated', task);
+    req.app.get('io').emit('notification', notification);
 
     res.status(201).json(task);
   } catch (error) {
@@ -74,7 +84,16 @@ const updateTask = async (req, res) => {
 
     await task.save();
 
+    const notification = new Notification({
+      userId: task.creatorEmail,
+      message: `Task "${task.name}" updated`,
+      taskId: task._id,
+      users: [...collaborators, ...viewers]
+    });
+    await notification.save();
+
     req.app.get('io').emit('taskUpdated', task);
+    req.app.get('io').emit('notification', notification);
 
     res.status(200).json(task);
   } catch (error) {
@@ -84,7 +103,6 @@ const updateTask = async (req, res) => {
 };
 
 const deleteTask = async (req, res) => {
-  console.log('delete api');
   const { id } = req.params;
 
   try {
@@ -98,11 +116,20 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
+    const notification = new Notification({
+      userId: task.creatorEmail,
+      message: `Task "${task.name}" deleted`,
+      taskId: task._id,
+      users: [...task.collaborators, ...task.viewers]
+    });
+    await notification.save();
+
     req.app.get('io').emit('taskDeleted', task);
+    req.app.get('io').emit('notification', notification);
 
     res.status(200).json({ message: 'Task deleted' });
   } catch (error) {
-    console.error('Error deleting task:', error); // Enhanced error logging
+    console.error('Error deleting task:', error);
     res.status(500).json({ message: 'Error deleting task', error: error.message });
   }
 };

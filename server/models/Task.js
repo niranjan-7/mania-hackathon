@@ -1,3 +1,4 @@
+// models/Task.js
 const mongoose = require('mongoose');
 
 const taskSchema = new mongoose.Schema({
@@ -7,12 +8,10 @@ const taskSchema = new mongoose.Schema({
   priority: { type: String, enum: ['Low', 'Medium', 'High'], required: true },
   status: { type: String, enum: ['Pending', 'In Progress', 'Completed'], required: true },
   creatorEmail: { type: String, required: true },
-  collaborators: { type: [String], default: [] },
-  viewers: { type: [String], default: [] },
+  collaborators: [{ type: String }],
+  viewers: [{ type: String }],
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now },
 });
 
-const Task = mongoose.model('Task', taskSchema);
-
-module.exports = Task;
+module.exports = mongoose.model('Task', taskSchema);

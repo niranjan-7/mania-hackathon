@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
+import * as yup from 'yup';
+import { addMonths, isAfter, isToday, isValid } from 'date-fns';
 
 interface TaskFormProps {
   initialTask?: Task;
   onSubmit: (task: Task) => void;
   submitButtonText: string;
-  creatorEmail:string;
+  creatorEmail: string;
 }
 
 interface Task {
@@ -16,17 +18,44 @@ interface Task {
   status: string;
   collaborators: string[];
   viewers: string[];
-  creatorEmail:string
+  creatorEmail: string;
 }
 
-const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButtonText,creatorEmail }) => {
+const validationSchema = yup.object().shape({
+  name: yup.string().max(30, 'Name must be at most 30 characters').required('Name is required'),
+  description: yup.string().max(60, 'Description must be at most 60 characters'),
+  dueDate: yup
+    .date()
+    .transform(parseDateString)
+    .test('is-today-or-later', 'Due Date must be today or later', (value:any) => isTodayOrLater(value))
+    .max(addMonths(new Date(), 6), 'Due Date cannot be more than 6 months in the future')
+    .required('Due Date is required'),
+  priority: yup.string().oneOf(['Low', 'Medium', 'High'], 'Invalid Priority').required('Priority is required'),
+  status: yup.string().oneOf(['Pending', 'In Progress', 'Completed'], 'Invalid Status').required('Status is required'),
+  collaborators: yup.array().of(yup.string().email('Invalid Email Format').required('Email is required')),
+  viewers: yup.array().of(yup.string().email('Invalid Email Format').required('Email is required')),
+});
+
+function parseDateString(value: any, originalValue: any) {
+  const parsedDate = originalValue ? new Date(originalValue) : null;
+  return isValid(parsedDate) ? parsedDate : new Date('invalid');
+}
+
+function isTodayOrLater(date: Date) {
+  return isAfter(date, new Date()) || isToday(date);
+}
+
+const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButtonText, creatorEmail }) => {
   const [name, setName] = useState(initialTask?.name || '');
   const [description, setDescription] = useState(initialTask?.description || '');
   const [dueDate, setDueDate] = useState(initialTask?.dueDate.split('T')[0] || '');
   const [priority, setPriority] = useState(initialTask?.priority || 'Low');
-  const [status, setStatus] = useState(initialTask?.status || 'Not Started');
-  const [collaborators, setCollaborators] = useState(initialTask?.collaborators.join(', ') || '');
-  const [viewers, setViewers] = useState(initialTask?.viewers.join(', ') || '');
+  const [status, setStatus] = useState(initialTask?.status || 'Pending');
+  const [collaborators, setCollaborators] = useState<string[]>(initialTask?.collaborators || []);
+  const [viewers, setViewers] = useState<string[]>(initialTask?.viewers || []);
+  const [newCollaborator, setNewCollaborator] = useState('');
+  const [newViewer, setNewViewer] = useState('');
+  const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
     if (initialTask) {
@@ -35,82 +64,178 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
       setDueDate(initialTask.dueDate.split('T')[0]);
       setPriority(initialTask.priority);
       setStatus(initialTask.status);
-      setCollaborators(initialTask.collaborators.join(', '));
-      setViewers(initialTask.viewers.join(', '));
+      setCollaborators(initialTask.collaborators || []);
+      setViewers(initialTask.viewers || []);
     }
   }, [initialTask]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddCollaborator = () => {
+    if (newCollaborator.trim() === '') return;
+    setCollaborators(prev => [...prev, newCollaborator.trim()]);
+    setNewCollaborator('');
+  };
+
+  const handleRemoveCollaborator = (index: number) => {
+    const updatedCollaborators = [...collaborators];
+    updatedCollaborators.splice(index, 1);
+    setCollaborators(updatedCollaborators);
+  };
+
+  const handleAddViewer = () => {
+    if (newViewer.trim() === '') return;
+    setViewers(prev => [...prev, newViewer.trim()]);
+    setNewViewer('');
+  };
+
+  const handleRemoveViewer = (index: number) => {
+    const updatedViewers = [...viewers];
+    updatedViewers.splice(index, 1);
+    setViewers(updatedViewers);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const task: Task = {
-      name,
-      description,
-      dueDate,
-      priority,
-      status,
-      collaborators: collaborators.split(',').map(email => email.trim()),
-      viewers: viewers.split(',').map(email => email.trim()),
-      creatorEmail
-    };
-    onSubmit(task);
+
+    try {
+      await validationSchema.validate({
+        name,
+        description,
+        dueDate,
+        priority,
+        status,
+        collaborators,
+        viewers,
+      }, { abortEarly: false });
+
+      const task: Task = {
+        name,
+        description,
+        dueDate,
+        priority,
+        status,
+        collaborators,
+        viewers,
+        creatorEmail,
+      };
+
+      onSubmit(task);
+
+      setName('');
+      setDescription('');
+      setDueDate('');
+      setPriority('Low');
+      setStatus('Pending');
+      setCollaborators([]);
+      setViewers([]);
+      setNewCollaborator('');
+      setNewViewer('');
+      setErrors({});
+    } catch (err) {
+      if (err instanceof yup.ValidationError) {
+        const validationErrors: { [key: string]: string } = {};
+        err.inner.forEach((e:any) => {
+          if (!validationErrors[e.path]) {
+            validationErrors[e.path] = e.message;
+          }
+        });
+        setErrors(validationErrors);
+      }
+    }
   };
 
   return (
     <FormContainer>
       <FormTitle>{submitButtonText} Task</FormTitle>
       <Form onSubmit={handleSubmit}>
-        <Label>Name</Label>
-        <Input
-          type="text"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
-        />
-        <Label>Description</Label>
-        <Textarea
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          required
-        />
-        <Label>Due Date</Label>
-        <Input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          required
-        />
-        <Label>Priority</Label>
-        <Select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-        >
-          <option value="Low">Low</option>
-          <option value="Medium">Medium</option>
-          <option value="High">High</option>
-        </Select>
-        <Label>Status</Label>
-        <Select
-          value={status}
-          onChange={(e) => setStatus(e.target.value)}
-        >
-          <option value="Not Started">Not Started</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </Select>
-        <Label>Collaborators</Label>
-        <Input
-          type="text"
-          value={collaborators}
-          onChange={(e) => setCollaborators(e.target.value)}
-          placeholder="Enter emails separated by commas"
-        />
-        <Label>Viewers</Label>
-        <Input
-          type="text"
-          value={viewers}
-          onChange={(e) => setViewers(e.target.value)}
-          placeholder="Enter emails separated by commas"
-        />
+        <FormGroup>
+          <Label>Name</Label>
+          <Input
+            type="text"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            required
+          />
+          {errors.name && <ErrorMessage>{errors.name}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Description</Label>
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+          />
+          {errors.description && <ErrorMessage>{errors.description}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Due Date</Label>
+          <Input
+            type="date"
+            value={dueDate}
+            onChange={(e) => setDueDate(e.target.value)}
+          />
+          {errors.dueDate && <ErrorMessage>{errors.dueDate}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Priority</Label>
+          <Select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+          >
+            <option value="Low">Low</option>
+            <option value="Medium">Medium</option>
+            <option value="High">High</option>
+          </Select>
+          {errors.priority && <ErrorMessage>{errors.priority}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Status</Label>
+          <Select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="Pending">Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </Select>
+          {errors.status && <ErrorMessage>{errors.status}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Collaborators</Label>
+          <Input
+            type="text"
+            value={newCollaborator}
+            onChange={(e) => setNewCollaborator(e.target.value)}
+            placeholder="Enter email"
+          />
+          <Button type="button" onClick={handleAddCollaborator}>Add Collaborator</Button>
+          <ChipContainer>
+            {collaborators.map((collaborator, index) => (
+              <Chip key={index}>
+                {collaborator}
+                <ChipClose onClick={() => handleRemoveCollaborator(index)}>x</ChipClose>
+              </Chip>
+            ))}
+          </ChipContainer>
+          {errors.collaborators && <ErrorMessage>{errors.collaborators}</ErrorMessage>}
+        </FormGroup>
+        <FormGroup>
+          <Label>Viewers</Label>
+          <Input
+            type="text"
+            value={newViewer}
+            onChange={(e) => setNewViewer(e.target.value)}
+            placeholder="Enter email"
+          />
+          <Button type="button" onClick={handleAddViewer}>Add Viewer</Button>
+          <ChipContainer>
+            {viewers.map((viewer, index) => (
+              <Chip key={index}>
+                {viewer}
+                <ChipClose onClick={() => handleRemoveViewer(index)}>x</ChipClose>
+              </Chip>
+            ))}
+          </ChipContainer>
+          {errors.viewers && <ErrorMessage>{errors.viewers}</ErrorMessage>}
+        </FormGroup>
         <Button type="submit">{submitButtonText}</Button>
       </Form>
     </FormContainer>
@@ -135,6 +260,12 @@ const Form = styled.form`
   flex-direction: column;
 `;
 
+const FormGroup = styled.div`
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+`;
+
 const Label = styled.label`
   margin-bottom: 5px;
   font-size: 14px;
@@ -143,23 +274,26 @@ const Label = styled.label`
 
 const Input = styled.input`
   padding: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  flex: 1;
 `;
 
 const Textarea = styled.textarea`
   padding: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  flex: 1;
 `;
 
 const Select = styled.select`
   padding: 10px;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
+  flex: 1;
 `;
 
 const Button = styled.button`
@@ -169,10 +303,36 @@ const Button = styled.button`
   border: none;
   border-radius: 4px;
   cursor: pointer;
+  flex: 0.5;
 
   &:hover {
     background-color: #0056b3;
   }
+`;
+
+const ChipContainer = styled.div`
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+`;
+
+const Chip = styled.div`
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+`;
+
+const ChipClose = styled.span`
+  margin-left: 5px;
+  cursor: pointer;
+`;
+
+const ErrorMessage = styled.span`
+  color: red;
+  font-size: 12px;
 `;
 
 export default TaskForm;

@@ -7,7 +7,7 @@ export default function IndexPage() {
       <div>
         <ul>
           <li><Link to="/sign-in">Sign In</Link></li>
-          <li><Link to="/dashboard">Dashboard</Link></li>
+          <li><Link to="/dashboard/tasks">Dashboard</Link></li>
         </ul>
       </div>
     </div>

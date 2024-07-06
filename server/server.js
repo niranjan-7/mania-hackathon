@@ -3,12 +3,15 @@ const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
 const taskRoutes = require('./routes/taskRoutes');
 const cors = require('cors');
+const http = require('http');
+const socketIo = require('socket.io');
+
 const app = express();
-const server = require('http').createServer(app);
-const io = require('socket.io')(server, {
+const server = http.createServer(app);
+const io = socketIo(server, {
   cors: {
-    origin: "*",
-  }
+    origin: '*',
+  },
 });
 
 app.set('io', io);
@@ -25,15 +28,15 @@ app.use(cors({
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
-app.use('/api', taskRoutes);
+app.use('/api/tasks', taskRoutes);
 
-// io.on('connection', (socket) => {
-//   console.log('a user connected');
+io.on('connection', (socket) => {
+  console.log('a user connected');
 
-//   socket.on('disconnect', () => {
-//     console.log('user disconnected');
-//   });
-// });
+  socket.on('disconnect', () => {
+    console.log('user disconnected');
+  });
+});
 
 const PORT = process.env.PORT || 5000;
 

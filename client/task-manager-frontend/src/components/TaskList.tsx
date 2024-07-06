@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import styled from 'styled-components';
-import io from 'socket.io-client';
 import { format } from 'date-fns';
 import { useUser } from '@clerk/clerk-react';
 
@@ -38,7 +37,7 @@ const TaskList: React.FC = () => {
       })
       .then(data => {
         setTasks(data);
-        console.log(data);
+        console.log('Tasklist',data);
       })
       .catch(error => {
         console.error('Error fetching tasks:', error);
@@ -83,7 +82,10 @@ const TaskList: React.FC = () => {
 
   return (
     <TaskListContainer>
-      <Title>Tasks</Title>
+      <Header>
+        <Title>Tasks</Title>
+        <CreateTaskButton to="/dashboard/create-task">Create New Task</CreateTaskButton>
+      </Header>
       <TaskTable>
         <thead>
           <tr>
@@ -109,13 +111,22 @@ const TaskList: React.FC = () => {
               <td>{format(new Date(task.dueDate), 'PP')}</td>
               <td>{task.priority}</td>
               <td>{task.status}</td>
-              <td>{task.collaborators.join(', ')}</td>
-              <td>{task.viewers.join(', ')}</td>
+              <td>
+                {task.collaborators.map((collaborator, index) => (
+                  <Chip key={index}>{collaborator}</Chip>
+                ))}
+              </td>
+              <td>
+                {task.viewers.map((viewer, index) => (
+                  <Chip key={index}>{viewer}</Chip>
+                ))}
+              </td>
               <td>
                 <StyledLink to={`${task._id}`}>View</StyledLink>
               </td>
               <td>
-                <StyledLink to={`edit/${task._id}`}>Edit</StyledLink>
+                {task.collaborators.includes(currentUserEmail as string) && <StyledLink to={`edit/${task._id}`}>Edit</StyledLink>}
+                {currentUserEmail == task.creatorEmail && <StyledLink to={`edit/${task._id}`}>Edit</StyledLink>}
               </td>
               <td>
                 <DeleteButton
@@ -139,11 +150,29 @@ const TaskListContainer = styled.div`
   margin: 0 auto;
 `;
 
-const Title = styled.h2`
-  text-align: center;
+const Header = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+`;
+
+const Title = styled.h2`
   font-size: 24px;
   color: #333;
+`;
+
+const CreateTaskButton = styled(Link)`
+  padding: 10px 20px;
+  background-color: #007bff;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  cursor: pointer;
+
+  &:hover {
+    background-color: #0056b3;
+  }
 `;
 
 const TaskTable = styled.table`
@@ -193,6 +222,16 @@ const DeleteButton = styled.button`
     background-color: #ccc;
     cursor: not-allowed;
   }
+`;
+
+const Chip = styled.span`
+  background-color: #f0f0f0;
+  color: #333;
+  padding: 5px 10px;
+  border-radius: 20px;
+  margin-right: 5px;
+  margin-bottom: 5px;
+  display: inline-block;
 `;
 
 export default TaskList;
