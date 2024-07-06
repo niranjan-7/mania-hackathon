@@ -23,12 +23,11 @@ const EditTask: React.FC = () => {
         console.error('Error fetching task:', error);
       }
     };
-
     fetchTask();
   }, [taskId]);
 
   const handleEditTask = async (updatedTask:any) => {
-    console.log(updatedTask)
+    console.log('updatedTask',updatedTask)
     try {
       const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
       socket.emit('taskUpdated', response.data);

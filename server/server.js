@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const connectDB = require('./config/db');
 const taskRoutes = require('./routes/taskRoutes');
+const notificationRoutes = require('./routes/notificationRoutes')
 const cors = require('cors');
 const http = require('http');
 const socketIo = require('socket.io');
@@ -29,6 +30,7 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use('/api/tasks', taskRoutes);
+app.use('/api/notifications', notificationRoutes); 
 
 io.on('connection', (socket) => {
   console.log('a user connected');

@@ -20,10 +20,9 @@ const createTask = async (req, res) => {
     await task.save();
 
     const notification = new Notification({
-      userId: creatorEmail,
-      message: `Task "${task.name}" created`,
+      message: `Task "${task.name}" created by "${task.creatorEmail}"`,
       taskId: task._id,
-      users: [...collaborators, ...viewers]
+      users: [creatorEmail, ...collaborators, ...viewers]
     });
     await notification.save();
 
@@ -64,7 +63,7 @@ const getTaskById = async (req, res) => {
 
 const updateTask = async (req, res) => {
   const { id } = req.params;
-  const { name, description, dueDate, priority, status, collaborators, viewers } = req.body;
+  const { name, description, creatorEmail, dueDate, priority, status, collaborators, viewers } = req.body;
 
   try {
     const task = await Task.findById(id);
@@ -72,6 +71,15 @@ const updateTask = async (req, res) => {
     if (!task) {
       return res.status(404).json({ message: 'Task not found' });
     }
+
+    const updates = [];
+    if (task.name !== name) updates.push({ field: 'name', oldValue: task.name, newValue: name });
+    if (task.description !== description) updates.push({ field: 'description', oldValue: task.description, newValue: description });
+    if (task.dueDate.toISOString() !== new Date(dueDate).toISOString()) updates.push({ field: 'due date', oldValue: task.dueDate.toISOString(), newValue: new Date(dueDate).toISOString() });
+    if (task.priority !== priority) updates.push({ field: 'priority', oldValue: task.priority, newValue: priority });
+    if (task.status !== status) updates.push({ field: 'status', oldValue: task.status, newValue: status });
+    if (JSON.stringify(task.collaborators) !== JSON.stringify(collaborators)) updates.push({ field: 'collaborators', oldValue: task.collaborators.join(', '), newValue: collaborators.join(', ') });
+    if (JSON.stringify(task.viewers) !== JSON.stringify(viewers)) updates.push({ field: 'viewers', oldValue: task.viewers.join(', '), newValue: viewers.join(', ') });
 
     task.name = name;
     task.description = description;
@@ -84,12 +92,21 @@ const updateTask = async (req, res) => {
 
     await task.save();
 
+    const notificationUsers = new Set([...collaborators, ...viewers]);
+    if (!notificationUsers.has(creatorEmail)) {
+      notificationUsers.add(creatorEmail);
+    }
+    if (!notificationUsers.has(task.creatorEmail)) {
+      notificationUsers.add(task.creatorEmail);
+    }
+
     const notification = new Notification({
-      userId: task.creatorEmail,
-      message: `Task "${task.name}" updated`,
+      message: `Task "${task.name}" updated by "${creatorEmail}".`,
       taskId: task._id,
-      users: [...collaborators, ...viewers]
+      users: Array.from(notificationUsers),
+      updates: updates
     });
+
     await notification.save();
 
     req.app.get('io').emit('taskUpdated', task);
@@ -117,7 +134,6 @@ const deleteTask = async (req, res) => {
     }
 
     const notification = new Notification({
-      userId: task.creatorEmail,
       message: `Task "${task.name}" deleted`,
       taskId: task._id,
       users: [...task.collaborators, ...task.viewers]

@@ -1,7 +1,11 @@
 const Notification = require('../models/Notification');
 
 const getNotificationsForUser = async (req, res) => {
-  const { userEmail } = req.params;
+  const { userEmail } = req.body;
+
+  if (!userEmail) {
+    return res.status(400).json({ message: 'User email is required' });
+  }
 
   try {
     const notifications = await Notification.find({ users: userEmail }).sort({ createdAt: -1 });

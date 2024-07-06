@@ -3,7 +3,6 @@ const { getNotificationsForUser } = require('../controllers/notificationControll
 
 const router = express.Router();
 
-// Route to get notifications for a specific user
-router.get('/:userEmail', getNotificationsForUser);
+router.post('/', getNotificationsForUser);  // Changed to POST request to handle email in req.body
 
 module.exports = router;

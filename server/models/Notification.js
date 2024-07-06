@@ -1,10 +1,6 @@
 const mongoose = require('mongoose');
 
 const notificationSchema = new mongoose.Schema({
-  userId: {
-    type: String,
-    required: true,
-  },
   message: {
     type: String,
     required: true,
@@ -19,7 +15,12 @@ const notificationSchema = new mongoose.Schema({
   },
   users:{
     type:[String],
-  }
+  },
+  updates: [{
+    field: { type: String, required: true },
+    oldValue: { type: mongoose.Schema.Types.Mixed },
+    newValue: { type: mongoose.Schema.Types.Mixed }
+  }]
 });
 
 const Notification = mongoose.model('Notification', notificationSchema);
