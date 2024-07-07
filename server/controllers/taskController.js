@@ -38,12 +38,38 @@ const createTask = async (req, res) => {
 
 const getTasks = async (req, res) => {
   try {
-    const tasks = await Task.find({});
+    // Extract query parameters
+    const { name, creatorEmail, status, priority, dueDateLTE, associatedEmail,description } = req.query;
+
+    // Construct filter object based on provided parameters
+    const filters = {};
+    if (name) filters.name = { $regex: new RegExp(name, 'i') }; // Case-insensitive search for name
+    if (creatorEmail) filters.creatorEmail = creatorEmail;
+    if (description) filters.description = description;
+    if (status) filters.status = status;
+    if (priority) filters.priority = priority;
+    if (dueDateLTE) {
+      filters.dueDate = { $lte: new Date(dueDateLTE) }; // Filter tasks with due date before the specified date
+    }
+
+    // Construct or query for associatedEmail
+    if (associatedEmail) {
+      filters.$or = [
+        { creatorEmail: associatedEmail },
+        { collaborators: associatedEmail },
+        { viewers: associatedEmail }
+      ];
+    }
+
+    // Fetch tasks based on filters
+    const tasks = await Task.find(filters);
+
     res.status(200).json(tasks);
   } catch (error) {
     res.status(500).json({ message: 'Error fetching tasks', error });
   }
 };
+
 
 const getTaskById = async (req, res) => {
   const { id } = req.params;
@@ -142,7 +168,7 @@ const deleteTask = async (req, res) => {
 
     req.app.get('io').emit('taskDeleted', task);
     req.app.get('io').emit('notification', notification);
-    
+
     res.status(200).json({ message: 'Task deleted' });
   } catch (error) {
     console.error('Error deleting task:', error);

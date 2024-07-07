@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
 import TaskForm from './TaskForm';
 import { useUser } from '@clerk/clerk-react';
+import { API_SERVER } from '../config/api';
 
 
 
@@ -15,7 +16,7 @@ const EditTask: React.FC = () => {
   useEffect(() => {
     const fetchTask = async () => {
       try {
-        const response = await axios.get(`http://localhost:5000/api/tasks/${taskId}`);
+        const response = await axios.get(API_SERVER+`/api/tasks/${taskId}`);
         setInitialTask(response.data);
       } catch (error) {
         console.error('Error fetching task:', error);
@@ -26,7 +27,7 @@ const EditTask: React.FC = () => {
 
   const handleEditTask = async (updatedTask: any) => {
     try {
-      await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
+      await axios.put(API_SERVER+`/api/tasks/${taskId}`, updatedTask);
       navigate('/dashboard/tasks');
     } catch (error) {
       console.error('Error updating task:', error);

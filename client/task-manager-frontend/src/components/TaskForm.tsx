@@ -3,6 +3,8 @@ import styled from 'styled-components';
 import * as yup from 'yup';
 import { addMonths, isAfter, isToday, isValid } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
+import { useUser } from '@clerk/clerk-react';
+import closeIcon from '../assets/close_24dp.svg';
 
 interface TaskFormProps {
   initialTask?: Task;
@@ -28,7 +30,7 @@ const validationSchema = yup.object().shape({
   dueDate: yup
     .date()
     .transform(parseDateString)
-    .test('is-today-or-later', 'Due Date must be today or later', (value:any) => isTodayOrLater(value))
+    .test('is-today-or-later', 'Due Date must be today or later', (value: any) => isTodayOrLater(value))
     .max(addMonths(new Date(), 6), 'Due Date cannot be more than 6 months in the future')
     .required('Due Date is required'),
   priority: yup.string().oneOf(['Low', 'Medium', 'High'], 'Invalid Priority').required('Priority is required'),
@@ -38,7 +40,6 @@ const validationSchema = yup.object().shape({
 });
 
 function parseDateString(value: any, originalValue: any) {
-  console.log(value);
   const parsedDate = originalValue ? new Date(originalValue) : null;
   return isValid(parsedDate) ? parsedDate : new Date('invalid');
 }
@@ -58,7 +59,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
   const [newCollaborator, setNewCollaborator] = useState('');
   const [newViewer, setNewViewer] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-   const navigate = useNavigate()
+  const navigate = useNavigate();
+  const { user } = useUser();
+
   useEffect(() => {
     if (initialTask) {
       setName(initialTask.name);
@@ -72,8 +75,10 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
   }, [initialTask]);
 
   const handleAddCollaborator = () => {
-    if (newCollaborator.trim() === '') return;
-    setCollaborators(prev => [...prev, newCollaborator.trim()]);
+    if (newCollaborator.trim() === '' || newCollaborator === creatorEmail) return;
+    if (collaborators.includes(newCollaborator)) return;
+    setCollaborators((prev) => [...prev, newCollaborator.trim()]);
+    setViewers((prev) => prev.filter((viewer) => viewer !== newCollaborator.trim()));
     setNewCollaborator('');
   };
 
@@ -84,8 +89,9 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
   };
 
   const handleAddViewer = () => {
-    if (newViewer.trim() === '') return;
-    setViewers(prev => [...prev, newViewer.trim()]);
+    if (newViewer.trim() === '' || newViewer === creatorEmail || collaborators.includes(newViewer)) return;
+    if (viewers.includes(newViewer)) return;
+    setViewers((prev) => [...prev, newViewer.trim()]);
     setNewViewer('');
   };
 
@@ -99,15 +105,18 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
     e.preventDefault();
 
     try {
-      await validationSchema.validate({
-        name,
-        description,
-        dueDate,
-        priority,
-        status,
-        collaborators,
-        viewers,
-      }, { abortEarly: false });
+      await validationSchema.validate(
+        {
+          name,
+          description,
+          dueDate,
+          priority,
+          status,
+          collaborators,
+          viewers,
+        },
+        { abortEarly: false }
+      );
 
       const task: Task = {
         name,
@@ -132,11 +141,11 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
       setNewCollaborator('');
       setNewViewer('');
       setErrors({});
-      navigate('/dashboard/tasks')
+      navigate('/dashboard/tasks');
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         const validationErrors: { [key: string]: string } = {};
-        err.inner.forEach((e:any) => {
+        err.inner.forEach((e: any) => {
           if (!validationErrors[e.path]) {
             validationErrors[e.path] = e.message;
           }
@@ -147,108 +156,137 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
   };
 
   return (
-    <FormContainer>
-      <FormTitle>{submitButtonText} Task</FormTitle>
-      <Form onSubmit={handleSubmit}>
-        <FormGroup>
-          <Label>Name</Label>
-          <Input
-            type="text"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-          />
-          {errors.name && <ErrorMessage>{errors.name}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Description</Label>
-          <Textarea
-            value={description}
-            onChange={(e) => setDescription(e.target.value)}
-          />
-          {errors.description && <ErrorMessage>{errors.description}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Due Date</Label>
-          <Input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-          />
-          {errors.dueDate && <ErrorMessage>{errors.dueDate}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Priority</Label>
-          <Select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-          >
-            <option value="Low">Low</option>
-            <option value="Medium">Medium</option>
-            <option value="High">High</option>
-          </Select>
-          {errors.priority && <ErrorMessage>{errors.priority}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Status</Label>
-          <Select
-            value={status}
-            onChange={(e) => setStatus(e.target.value)}
-          >
-            <option value="Pending">Pending</option>
-            <option value="In Progress">In Progress</option>
-            <option value="Completed">Completed</option>
-          </Select>
-          {errors.status && <ErrorMessage>{errors.status}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Collaborators</Label>
-          <Input
-            type="text"
-            value={newCollaborator}
-            onChange={(e) => setNewCollaborator(e.target.value)}
-            placeholder="Enter email"
-          />
-          <Button type="button" onClick={handleAddCollaborator}>Add Collaborator</Button>
-          <ChipContainer>
-            {collaborators.map((collaborator, index) => (
-              <Chip key={index}>
-                {collaborator}
-                <ChipClose onClick={() => handleRemoveCollaborator(index)}>x</ChipClose>
-              </Chip>
-            ))}
-          </ChipContainer>
-          {errors.collaborators && <ErrorMessage>{errors.collaborators}</ErrorMessage>}
-        </FormGroup>
-        <FormGroup>
-          <Label>Viewers</Label>
-          <Input
-            type="text"
-            value={newViewer}
-            onChange={(e) => setNewViewer(e.target.value)}
-            placeholder="Enter email"
-          />
-          <Button type="button" onClick={handleAddViewer}>Add Viewer</Button>
-          <ChipContainer>
-            {viewers.map((viewer, index) => (
-              <Chip key={index}>
-                {viewer}
-                <ChipClose onClick={() => handleRemoveViewer(index)}>x</ChipClose>
-              </Chip>
-            ))}
-          </ChipContainer>
-          {errors.viewers && <ErrorMessage>{errors.viewers}</ErrorMessage>}
-        </FormGroup>
-        <Button type="submit">{submitButtonText}</Button>
-      </Form>
-    </FormContainer>
+    <>
+      <EmptyDiv></EmptyDiv>
+      <FormContainer>
+        <FormTitle>{submitButtonText} Task</FormTitle>
+        <Form onSubmit={handleSubmit}>
+          <FormGrid>
+            <LeftColumn>
+              <FormGroup>
+                <Label>Name</Label>
+                <Input type="text" value={name} onChange={(e) => setName(e.target.value)} required />
+                {errors.name && <ErrorMessage>{errors.name}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>Description</Label>
+                <Input value={description} onChange={(e) => setDescription(e.target.value)} />
+                {errors.description && <ErrorMessage>{errors.description}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>Due Date</Label>
+                <Input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                {errors.dueDate && <ErrorMessage>{errors.dueDate}</ErrorMessage>}
+              </FormGroup>
+            </LeftColumn>
+            <RightColumn>
+              <FormGroup>
+                <Label>Priority</Label>
+                <StyledSelect value={priority} onChange={(e) => setPriority(e.target.value)}>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </StyledSelect>
+                {errors.priority && <ErrorMessage>{errors.priority}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>Status</Label>
+                <StyledSelect value={status} onChange={(e) => setStatus(e.target.value)}>
+                  <option value="Pending">Pending</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                </StyledSelect>
+                {errors.status && <ErrorMessage>{errors.status}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>Collaborators</Label>
+                <ChipContainer>
+                  {collaborators.map((collaborator, index) => (
+                    <Chip key={index}>
+                      {collaborator}
+                      <ChipClose onClick={() => handleRemoveCollaborator(index)}><img src={closeIcon} height='15px' /></ChipClose>
+                    </Chip>
+                  ))}
+                </ChipContainer>
+                <Input
+                  type="text"
+                  value={newCollaborator}
+                  onChange={(e) => setNewCollaborator(e.target.value)}
+                  placeholder="Enter email"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddCollaborator}
+                  disabled={
+                    newCollaborator === creatorEmail ||
+                    collaborators.includes(newCollaborator)
+                  }
+                >
+                  Add Collaborator
+                </Button>
+                
+                {errors.collaborators && <ErrorMessage>{errors.collaborators}</ErrorMessage>}
+              </FormGroup>
+              <FormGroup>
+                <Label>Viewers</Label>
+                <ChipContainer>
+                  {viewers.map((viewer, index) => (
+                    <Chip key={index}>
+                      {viewer}
+                      <ChipClose onClick={() => handleRemoveViewer(index)}><img src={closeIcon} height='15px'/></ChipClose>
+                    </Chip>
+                  ))}
+                </ChipContainer>
+                {(submitButtonText === 'Create'||user?.primaryEmailAddress?.emailAddress == creatorEmail) && (
+                  <>
+                    <Input
+                      type="text"
+                      value={newViewer}
+                      onChange={(e) => setNewViewer(e.target.value)}
+                      placeholder="Enter email"
+                    />
+                    <Button
+                      type="button"
+                      onClick={handleAddViewer}
+                      disabled={
+                        newViewer === creatorEmail ||
+                        viewers.includes(newViewer) ||
+                        collaborators.includes(newViewer)
+                      }
+                    >
+                      Add Viewer
+                    </Button>
+                  </>
+                )}
+                {submitButtonText === 'Update' &&
+                  user?.primaryEmailAddress?.emailAddress !== creatorEmail &&
+                  !collaborators.includes(user?.primaryEmailAddress?.emailAddress as string) && (
+                    <Button type="button" onClick={handleAddViewer}>
+                      Add yourself as a Viewer
+                    </Button>
+                  )}
+                {errors.viewers && <ErrorMessage>{errors.viewers}</ErrorMessage>}
+              </FormGroup>
+            </RightColumn>
+          </FormGrid>
+          <Button type="submit">{submitButtonText}</Button>
+        </Form>
+      </FormContainer>
+    </>
   );
 };
 
+const EmptyDiv = styled.div`
+  min-height: 3rem;
+`;
+
 const FormContainer = styled.div`
   padding: 20px;
-  max-width: 500px;
+  max-width: 700px;
   margin: 0 auto;
+  border: 2px solid #007bff;
+  border-radius: 8px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 `;
 
 const FormTitle = styled.h2`
@@ -259,6 +297,22 @@ const FormTitle = styled.h2`
 `;
 
 const Form = styled.form`
+  display: flex;
+  flex-direction: column;
+`;
+
+const FormGrid = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+`;
+
+const LeftColumn = styled.div`
+  display: flex;
+  flex-direction: column;
+`;
+
+const RightColumn = styled.div`
   display: flex;
   flex-direction: column;
 `;
@@ -283,35 +337,45 @@ const Input = styled.input`
   flex: 1;
 `;
 
-const Textarea = styled.textarea`
+const StyledSelect = styled.select`
   padding: 10px;
   margin-bottom: 10px;
   border: 1px solid #ddd;
   border-radius: 4px;
   flex: 1;
+  appearance: none;
+  background: white;
+
+  &:focus {
+    outline: none;
+    border-color: #007bff;
+  }
+
+  option {
+    color: #333;
+    background: #fff;
+    display: block;
+    white-space: nowrap;
+    min-height: 20px;
+    padding: 5px;
+  }
 `;
 
-const Select = styled.select`
+const Button = styled.button<{disabled?:boolean}>`
   padding: 10px;
-  margin-bottom: 10px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  flex: 1;
-`;
-
-const Button = styled.button`
-  padding: 10px;
-  background-color: #007bff;
+  background-color: ${(props: { disabled?: boolean }) => (props.disabled ? '#ccc' : '#007bff')};
   color: #fff;
   border: none;
   border-radius: 4px;
-  cursor: pointer;
+  cursor: ${(props: { disabled?: boolean }) => (props.disabled ? 'not-allowed' : 'pointer')};
   flex: 0.5;
 
   &:hover {
-    background-color: #0056b3;
+    background-color: ${(props: { disabled?: boolean }) => (props.disabled ? '#ccc' : '#0056b3')};
   }
 `;
+
+
 
 const ChipContainer = styled.div`
   display: flex;

@@ -5,7 +5,7 @@ import { useUser } from '@clerk/clerk-react';
 import io from 'socket.io-client'; // Import socket.io-client
 import { API_SERVER } from '../config/api';
 
-const socket = io(API_SERVER); // Replace with your server URL
+const socket = io(API_SERVER+'/'); // Replace with your server URL
 
 const NotificationContainer = styled.div`
   width: 100%;
