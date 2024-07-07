@@ -97,7 +97,7 @@ const NotificationComponent = () => {
           </NotificationItem>
         ))}
       </NotificationContainer>
-    </>:<></>
+    </>:<>Loading</>
     }
     </>
   );
