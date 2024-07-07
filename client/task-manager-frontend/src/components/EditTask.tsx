@@ -10,7 +10,7 @@ const EditTask: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const [initialTask, setInitialTask] = useState(null);
-  const { user, isLoaded } = useUser();
+  const { user } = useUser();
 
   useEffect(() => {
     const fetchTask = async () => {

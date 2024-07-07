@@ -11,7 +11,7 @@ import { API_SERVER } from '../config/api';
 const CreateTask: React.FC = () => {
   const socket = io();
   const navigate = useNavigate();
-  const { user, isLoaded } = useUser();
+  const { user } = useUser();
 
   const handleCreateTask = async (task: any) => {
     const newTask = {

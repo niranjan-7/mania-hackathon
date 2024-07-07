@@ -78,22 +78,28 @@ const NotificationComponent = () => {
   }, [user]);
 
   return (
-    <NotificationContainer>
-      {notifications.map((notification:any) => (
-        <NotificationItem key={notification._id}>
-          <NotificationMessage>{notification.message}</NotificationMessage>
-          {notification.updates && notification.updates.length > 0 && (
-            <NotificationUpdates>
-              {notification.updates.map((update:any) => (
-                <NotificationUpdate key={update._id}>
-                  {update.field} from "{update.oldValue}" to "{update.newValue}"
-                </NotificationUpdate>
-              ))}
-            </NotificationUpdates>
-          )}
-        </NotificationItem>
-      ))}
-    </NotificationContainer>
+    <>
+    {isLoading?
+    <>
+      <NotificationContainer>
+        {notifications.map((notification:any) => (
+          <NotificationItem key={notification._id}>
+            <NotificationMessage>{notification.message}</NotificationMessage>
+            {notification.updates && notification.updates.length > 0 && (
+              <NotificationUpdates>
+                {notification.updates.map((update:any) => (
+                  <NotificationUpdate key={update._id}>
+                    {update.field} from "{update.oldValue}" to "{update.newValue}"
+                  </NotificationUpdate>
+                ))}
+              </NotificationUpdates>
+            )}
+          </NotificationItem>
+        ))}
+      </NotificationContainer>
+    </>:<></>
+    }
+    </>
   );
 };
 
