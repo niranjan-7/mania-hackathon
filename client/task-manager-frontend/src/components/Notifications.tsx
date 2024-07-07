@@ -79,7 +79,7 @@ const NotificationComponent = () => {
 
   return (
     <>
-    {isLoading?
+    {!isLoading?
     <>
       <NotificationContainer>
         {notifications.map((notification:any) => (
