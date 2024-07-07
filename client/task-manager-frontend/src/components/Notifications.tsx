@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import axios from 'axios';
-import { useAuth, useUser } from '@clerk/clerk-react'; // Assuming you are using Clerk for authentication
+import { useUser } from '@clerk/clerk-react';
+import io from 'socket.io-client'; // Import socket.io-client
+import { API_SERVER } from '../config/api';
+
+const socket = io(API_SERVER); // Replace with your server URL
 
 const NotificationContainer = styled.div`
   width: 100%;
@@ -35,23 +39,42 @@ const NotificationUpdate = styled.li`
   color: #555;
 `;
 
+interface Notification {
+  _id: string;
+  message: string;
+  updates?: { _id: string; field: string; oldValue: string; newValue: string }[];
+}
+
 const NotificationComponent = () => {
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const { user } = useUser();
+  const [isLoading, setIsLoading] = useState(true);
+
 
   useEffect(() => {
     const fetchNotifications = async () => {
       try {
-        const response = await axios.post('http://localhost:5000/api/notifications', { userEmail: user?.primaryEmailAddress?.emailAddress });
+        const response = await axios.post(API_SERVER+'/api/notifications', { userEmail: user?.primaryEmailAddress?.emailAddress });
         setNotifications(response.data);
       } catch (error) {
         console.error('Error fetching notifications:', error);
+      } finally{
+        setIsLoading(false)
       }
     };
 
     if (user) {
       fetchNotifications();
     }
+
+    // Socket.io events
+    socket.on('notification', (notification:Notification) => {
+      setNotifications((prevNotifications) => [notification, ...prevNotifications]);
+    });
+
+    return () => {
+      socket.off('notification');
+    };
   }, [user]);
 
   return (

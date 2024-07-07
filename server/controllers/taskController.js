@@ -133,7 +133,7 @@ const deleteTask = async (req, res) => {
       return res.status(404).json({ message: 'Task not found' });
     }
 
-    const notification = new Notification({
+    const notification = new Notification({ 
       message: `Task "${task.name}" deleted`,
       taskId: task._id,
       users: [...task.collaborators, ...task.viewers]
@@ -142,7 +142,7 @@ const deleteTask = async (req, res) => {
 
     req.app.get('io').emit('taskDeleted', task);
     req.app.get('io').emit('notification', notification);
-
+    
     res.status(200).json({ message: 'Task deleted' });
   } catch (error) {
     console.error('Error deleting task:', error);

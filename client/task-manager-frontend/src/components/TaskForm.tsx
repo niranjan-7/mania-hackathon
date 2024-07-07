@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import * as yup from 'yup';
 import { addMonths, isAfter, isToday, isValid } from 'date-fns';
+import { useNavigate } from 'react-router-dom';
 
 interface TaskFormProps {
   initialTask?: Task;
@@ -56,7 +57,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
   const [newCollaborator, setNewCollaborator] = useState('');
   const [newViewer, setNewViewer] = useState('');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
+   const navigate = useNavigate()
   useEffect(() => {
     if (initialTask) {
       setName(initialTask.name);
@@ -130,6 +131,7 @@ const TaskForm: React.FC<TaskFormProps> = ({ initialTask, onSubmit, submitButton
       setNewCollaborator('');
       setNewViewer('');
       setErrors({});
+      navigate('/dashboard/tasks')
     } catch (err) {
       if (err instanceof yup.ValidationError) {
         const validationErrors: { [key: string]: string } = {};

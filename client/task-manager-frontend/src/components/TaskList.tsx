@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import styled from 'styled-components';
 import { format } from 'date-fns';
 import { useUser } from '@clerk/clerk-react';
+import { io } from 'socket.io-client';
+import { API_SERVER } from '../config/api';
 
 interface Task {
   _id: string;
@@ -20,6 +22,7 @@ const TaskList: React.FC = () => {
   const { isSignedIn, user, isLoaded } = useUser();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isSignedIn && isLoaded) {
@@ -28,7 +31,7 @@ const TaskList: React.FC = () => {
   }, [isSignedIn, isLoaded, user]);
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/tasks')
+    fetch(API_SERVER+'/api/tasks')
       .then(response => {
         if (!response.ok) {
           throw new Error(`HTTP error! Status: ${response.status}`);
@@ -37,29 +40,48 @@ const TaskList: React.FC = () => {
       })
       .then(data => {
         setTasks(data);
-        console.log('Tasklist',data);
+        // console.log('Tasklist',data);
       })
       .catch(error => {
         console.error('Error fetching tasks:', error);
+      })
+      .finally(()=>{
+        setIsLoading(false)
       });
 
-    // Uncomment these lines to enable real-time updates via socket.io
-    // const socket = io();
-    // socket.on('taskCreated', (task: Task) => {
-    //   setTasks(prevTasks => [...prevTasks, task]);
-    // });
-    // socket.on('taskUpdated', (updatedTask: Task) => {
-    //   setTasks(prevTasks =>
-    //     prevTasks.map(task => (task._id === updatedTask._id ? updatedTask : task))
-    //   );
-    // });
-    // socket.on('taskDeleted', (deletedTask: Task) => {
-    //   setTasks(prevTasks => prevTasks.filter(task => task._id !== deletedTask._id));
-    // });
-    // return () => {
-    //   socket.disconnect();
-    // };
+      const handleTaskCreated = (task: Task) => {
+        setTasks(prevTasks => [...prevTasks, task]);
+      };
+    
+      const handleTaskUpdated = (updatedTask: Task) => {
+        setTasks(prevTasks =>
+          prevTasks.map(task => (task._id === updatedTask._id ? updatedTask : task))
+        );
+      };
+    
+      const handleTaskDeleted = (deletedTask: Task) => {
+        setTasks(prevTasks => prevTasks.filter(task => task._id !== deletedTask._id));
+      };
+      const socket = io(API_SERVER+'/');
+    
+      socket.on('taskCreated', handleTaskCreated);
+      socket.on('taskUpdated', handleTaskUpdated);
+      socket.on('taskDeleted', handleTaskDeleted);
+    
+      const disconnectSocket = () => {
+        socket.disconnect();
+      };
+    
+      return () => {
+        disconnectSocket();
+      };
   }, [currentUserEmail]);
+
+
+
+
+
+
 
   const deleteTask = async (taskId: string) => {
     const confirmed = window.confirm('Are you sure you want to delete this task?');
@@ -86,6 +108,7 @@ const TaskList: React.FC = () => {
         <Title>Tasks</Title>
         <CreateTaskButton to="/dashboard/create-task">Create New Task</CreateTaskButton>
       </Header>
+      {isLoading ? (<>Loading</>):
       <TaskTable>
         <thead>
           <tr>
@@ -139,7 +162,7 @@ const TaskList: React.FC = () => {
             </tr>
           ))}
         </tbody>
-      </TaskTable>
+      </TaskTable>}
     </TaskListContainer>
   );
 };

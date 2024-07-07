@@ -1,18 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { useNavigate, useParams } from 'react-router-dom';
-import io from 'socket.io-client';
 import TaskForm from './TaskForm';
 import { useUser } from '@clerk/clerk-react';
 
-const socket = io('http://localhost:5000');
+
 
 const EditTask: React.FC = () => {
   const { taskId } = useParams<{ taskId: string }>();
   const navigate = useNavigate();
   const [initialTask, setInitialTask] = useState(null);
-  const { isSignedIn, user, isLoaded } = useUser();
-  console.log(isSignedIn, user?.primaryEmailAddress?.emailAddress, isLoaded);
+  const { user, isLoaded } = useUser();
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -26,11 +24,9 @@ const EditTask: React.FC = () => {
     fetchTask();
   }, [taskId]);
 
-  const handleEditTask = async (updatedTask:any) => {
-    console.log('updatedTask',updatedTask)
+  const handleEditTask = async (updatedTask: any) => {
     try {
-      const response = await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
-      socket.emit('taskUpdated', response.data);
+      await axios.put(`http://localhost:5000/api/tasks/${taskId}`, updatedTask);
       navigate('/dashboard/tasks');
     } catch (error) {
       console.error('Error updating task:', error);
@@ -45,7 +41,9 @@ const EditTask: React.FC = () => {
         submitButtonText="Update"
         creatorEmail={user?.primaryEmailAddress?.emailAddress as string}
       />
-    ):(<>Loading</>)
+    ) : (
+      <>Loading</>
+    )
   );
 };
 
