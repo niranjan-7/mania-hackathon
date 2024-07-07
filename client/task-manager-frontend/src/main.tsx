@@ -1,7 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import { RouterProvider, createBrowserRouter } from 'react-router-dom'
-import io from 'socket.io-client';
  
 import RootLayout from './layouts/root-layout'
 import DashboardLayout from './layouts/dashboard-layout'

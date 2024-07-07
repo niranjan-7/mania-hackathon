@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import axios from 'axios';
 import { format } from 'date-fns';
-import { useUser } from '@clerk/clerk-react';
 import { io } from 'socket.io-client';
 import { API_SERVER } from '../config/api';
 
@@ -11,7 +10,6 @@ import { API_SERVER } from '../config/api';
 const TaskDetail: React.FC= () => {
   const { taskId } = useParams<{ taskId: string }>();
   const [task, setTask] = useState<any>(null);
-  const { user } = useUser();
   const socket = io(API_SERVER+'/');
 
 
