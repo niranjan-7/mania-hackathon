@@ -20,7 +20,7 @@ app.set('io', io);
 connectDB();
 
 app.use(cors({
-  origin: 'http://localhost:5173', // specify the client URL or use "*" to allow all origins
+  origin: "*", // specify the client URL or use "*" to allow all origins
   methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   credentials: true, // allow cookies to be sent and received
   optionsSuccessStatus: 204
