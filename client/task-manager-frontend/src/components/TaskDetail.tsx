@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { io } from 'socket.io-client';
 import styled from 'styled-components';
@@ -102,11 +102,41 @@ const EmptyDiv = styled.div`
     min-height: 3rem;
 `;
 
+interface Task {
+    name: string;
+    description: string;
+    dueDate: string;
+    priority: string;
+    status: string;
+    collaborators: string[];
+    viewers: string[];
+    creatorEmail: string;
+}
+
 const TaskDetail: React.FC = () => {
     const { taskId } = useParams<{ taskId: string }>();
-    const [task, setTask] = useState<any>(null);
+    const navigate = useNavigate();
+    const currentDate = new Date();
+    const isoDateString = currentDate.toISOString();
+
+    const [task, setTask] = useState<Task>({
+        name: '',
+        description: '',
+        dueDate: isoDateString,
+        priority: '',
+        status: '',
+        collaborators: [],
+        viewers: [],
+        creatorEmail: ''
+    });
+
+    const [addingViewer, setAddingViewer] = useState<boolean>(false);
+    const [addingCollaborator, setAddingCollaborator] = useState<boolean>(false);
+
     const socket = io(API_SERVER + '/');
     const { user } = useUser();
+    const dueDate = new Date(task.dueDate);
+    const overdue = isAfter(currentDate, dueDate);
 
     useEffect(() => {
         const fetchTask = async () => {
@@ -132,38 +162,40 @@ const TaskDetail: React.FC = () => {
     }, [taskId, socket]);
 
     const addViewer = async () => {
+        setAddingViewer(true);
         try {
             const updatedTask = {
                 ...task,
                 viewers: [...task.viewers, user?.primaryEmailAddress?.emailAddress], // Add current user's email to viewers array
             };
             await axios.put(`${API_SERVER}/api/tasks/${taskId}`, updatedTask);
-            setTask(updatedTask);
+            navigate('/dashboard/tasks');
         } catch (error) {
             console.error('Error adding viewer:', error);
+        } finally {
+            setAddingViewer(false);
         }
     };
 
     const addCollaborator = async () => {
+        setAddingCollaborator(true);
         try {
             const updatedTask = {
                 ...task,
-                collaborators: [...task.collaborators, user?.primaryEmailAddress?.emailAddress], // Add current user's email to collaborators array
+                collaborators: [...task.collaborators, user?.primaryEmailAddress?.emailAddress],
             };
             await axios.put(`${API_SERVER}/api/tasks/${taskId}`, updatedTask);
-            setTask(updatedTask); // Update local state with new collaborators
+            navigate('/dashboard/tasks');
         } catch (error) {
             console.error('Error adding collaborator:', error);
+        } finally {
+            setAddingCollaborator(false);
         }
     };
 
     if (!task) {
         return <div>Loading task...</div>;
     }
-
-    const currentDate = new Date();
-    const dueDate = new Date(task.dueDate);
-    const overdue = isAfter(currentDate, dueDate);
 
     return (
         <>
@@ -192,7 +224,12 @@ const TaskDetail: React.FC = () => {
                             <li key={index}>{collaborator}</li>
                         ))}
                     </ul>
-                    <AddCollaboratorButton onClick={addCollaborator}>Add Yourself as Collaborator</AddCollaboratorButton>
+                    {user?.primaryEmailAddress?.emailAddress !== task.creatorEmail &&
+                        !task.collaborators.includes(user?.primaryEmailAddress?.emailAddress as string) && (
+                            <AddCollaboratorButton disabled={addingCollaborator} onClick={addCollaborator}>
+                                {addingCollaborator ? 'Adding...' : 'Add Yourself as Collaborator'}
+                            </AddCollaboratorButton>
+                        )}
                 </div>
                 <div>
                     <h3>Viewers:</h3>
@@ -201,7 +238,13 @@ const TaskDetail: React.FC = () => {
                             <li key={index}>{viewer}</li>
                         ))}
                     </ul>
-                    <AddViewerButton onClick={addViewer}>Add Yourself as Viewer</AddViewerButton>
+                    {user?.primaryEmailAddress?.emailAddress !== task.creatorEmail &&
+                        !task.collaborators.includes(user?.primaryEmailAddress?.emailAddress as string) &&
+                        !task.viewers.includes(user?.primaryEmailAddress?.emailAddress as string) && (
+                            <AddViewerButton disabled={addingViewer} onClick={addViewer}>
+                                {addingViewer ? 'Adding...' : 'Add Yourself as Viewer'}
+                            </AddViewerButton>
+                        )}
                 </div>
                 <Link to="/dashboard/tasks">
                     <ReturnButton>Return to Dashboard</ReturnButton>

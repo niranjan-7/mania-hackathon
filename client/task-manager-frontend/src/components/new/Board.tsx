@@ -89,7 +89,8 @@ const AgileBoard: React.FC = () => {
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const navigate = useNavigate();
-    const [filterName, setFilterName] = useState<string>(''); // State for filter name
+    const [filterName, setFilterName] = useState<string>(''); 
+    const [filterDesc, setFilterDesc] = useState<string>(''); // State for filter name
     const [selectedPriority, setSelectedPriority] = useState<'Low' | 'High' | 'Medium' | 'All'>('All');
     const socket = io(API_SERVER+'/');
 
@@ -169,7 +170,7 @@ const AgileBoard: React.FC = () => {
             const dataPending = await responsePending.json();
             const dataInProgress = await responseInProgress.json();
             const dataCompleted = await responseCompleted.json();
-
+            
             setPendingTasks(dataPending);
             setProgressTasks(dataInProgress);
             setCompletedTasks(dataCompleted);
@@ -205,10 +206,7 @@ const AgileBoard: React.FC = () => {
     }, [currentUserEmail]); // Include filterName in dependencies to refetch tasks when filter changes
 
     useEffect(() => {
-        // Function to filter tasks based on filterName
         const filterTasks = () => {
-            // Filter by name
-
             const filteredPendingByName = pending1Tasks.filter(task =>
                 task.name.toLowerCase().includes(filterName.toLowerCase())
             );
@@ -218,36 +216,53 @@ const AgileBoard: React.FC = () => {
             const filteredCompletedByName = completed1Tasks.filter(task =>
                 task.name.toLowerCase().includes(filterName.toLowerCase())
             );
-
-
-            let filteredPending = filteredPendingByName;
-            let filteredProgress = filteredProgressByName;
-            let filteredCompleted = filteredCompletedByName;
-
-            if (selectedPriority !== 'All') {
-                filteredPending = filteredPending.filter(task => task.priority === selectedPriority);
-                filteredProgress = filteredProgress.filter(task => task.priority === selectedPriority);
-                filteredCompleted = filteredCompleted.filter(task => task.priority === selectedPriority);
-            }
-
-            setPendingTasks(filteredPending);
-            setProgressTasks(filteredProgress);
-            setCompletedTasks(filteredCompleted);
+            setPendingTasks(filteredPendingByName);
+            setProgressTasks(filteredProgressByName);
+            setCompletedTasks(filteredCompletedByName);
         };
 
         if (filterName!=''){
         filterTasks();
         }
-    }, [filterName, selectedPriority]);
+    }, [filterName]);
 
+
+    useEffect(() => {
+        const filterTasks = () => {
+            const filteredPendingByDesc = pending1Tasks.filter(task =>
+                task.description.toLowerCase().includes(filterDesc.toLowerCase())
+            );
+            const filteredProgressByDesc = progress1Tasks.filter(task =>
+                task.description.toLowerCase().includes(filterDesc.toLowerCase())
+            );
+            const filteredCompletedByDesc = completed1Tasks.filter(task =>
+                task.description.toLowerCase().includes(filterDesc.toLowerCase())
+            );
+            setPendingTasks(filteredPendingByDesc);
+            setProgressTasks(filteredProgressByDesc);
+            setCompletedTasks(filteredCompletedByDesc);
+        };
+
+        if (filterDesc!=''){
+        filterTasks();
+        }
+    }, [filterDesc]);
     // const handlePriorityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
     //     const selectedPriorityValue = event.target.value as 'Low' | 'High' | 'Medium' | 'All';
     //     setSelectedPriority(selectedPriorityValue !== 'All' ? selectedPriorityValue : 'All');
     // };
 
-    const handleReset = () =>{
+    const handleResetForName = () =>{
         setSelectedPriority('All')
         setFilterName('')
+        setPendingTasks(pending1Tasks)
+        setProgressTasks(progress1Tasks)
+        setCompletedTasks(completed1Tasks)
+    }
+
+    const handleResetForDesc = () =>{
+        setSelectedPriority('All')
+        setFilterDesc('')
         setPendingTasks(pending1Tasks)
         setProgressTasks(progress1Tasks)
         setCompletedTasks(completed1Tasks)
@@ -268,7 +283,16 @@ const AgileBoard: React.FC = () => {
                     <option value="Medium">Medium Priority</option>
                     <option value="Low">Low Priority</option>
                 </PriorityFilter> */}
-                <FilterButton onClick={handleReset}>Reset</FilterButton>
+                <FilterButton onClick={handleResetForName}>Reset</FilterButton>
+            </FilterContainer>
+            <FilterContainer>
+                <FilterInput
+                    type="text"
+                    placeholder="Filter by description..."
+                    value={filterDesc}
+                    onChange={(e) => setFilterDesc(e.target.value)}
+                />
+                <FilterButton onClick={handleResetForDesc}>Reset</FilterButton>
             </FilterContainer>
             <FilterButton onClick={()=>{navigate('/dashboard/create-task')}}>Add a Task</FilterButton>
             {isLoading ? (

@@ -107,13 +107,15 @@ const updateTask = async (req, res) => {
     if (JSON.stringify(task.collaborators) !== JSON.stringify(collaborators)) updates.push({ field: 'collaborators', oldValue: task.collaborators.join(', '), newValue: collaborators.join(', ') });
     if (JSON.stringify(task.viewers) !== JSON.stringify(viewers)) updates.push({ field: 'viewers', oldValue: task.viewers.join(', '), newValue: viewers.join(', ') });
 
+    const updatedViewers = viewers.filter(viewer => !collaborators.includes(viewer));
+
     task.name = name;
     task.description = description;
     task.dueDate = dueDate;
     task.priority = priority;
     task.status = status;
     task.collaborators = collaborators;
-    task.viewers = viewers;
+    task.viewers = updatedViewers;
     task.updatedAt = Date.now();
 
     await task.save();
