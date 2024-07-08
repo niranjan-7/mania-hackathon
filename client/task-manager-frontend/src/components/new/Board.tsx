@@ -4,6 +4,7 @@ import { Task } from './Task';
 import { useUser } from '@clerk/clerk-react';
 import { API_SERVER } from '../../config/api';
 import io from 'socket.io-client';
+import { useNavigate } from 'react-router-dom';
 
 const Board = styled.div`
     display: flex;
@@ -87,6 +88,7 @@ const AgileBoard: React.FC = () => {
     const [completed1Tasks, setCompleted1Tasks] = useState<Task[]>([]);
     const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const navigate = useNavigate();
     const [filterName, setFilterName] = useState<string>(''); // State for filter name
     const [selectedPriority, setSelectedPriority] = useState<'Low' | 'High' | 'Medium' | 'All'>('All');
     const socket = io(API_SERVER+'/');
@@ -283,7 +285,7 @@ const AgileBoard: React.FC = () => {
                 </PriorityFilter> */}
                 <FilterButton onClick={handleReset}>Reset</FilterButton>
             </FilterContainer>
-
+            <FilterButton onClick={()=>{navigate('/dashboard/create-task')}}>Add a Task</FilterButton>
             {isLoading ? (
                 <p>Loading...</p>
             ) : (
