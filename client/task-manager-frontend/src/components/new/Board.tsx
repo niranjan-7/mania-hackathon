@@ -61,10 +61,10 @@ const FilterButton = styled.button`
     font-size: 14px;
 `;
 
-const PriorityFilter = styled.select`
-    padding: 8px;
-    font-size: 14px;
-`;
+// const PriorityFilter = styled.select`
+//     padding: 8px;
+//     font-size: 14px;
+// `;
 
 interface Task {
     _id: string;
@@ -93,22 +93,7 @@ const AgileBoard: React.FC = () => {
     const [selectedPriority, setSelectedPriority] = useState<'Low' | 'High' | 'Medium' | 'All'>('All');
     const socket = io(API_SERVER+'/');
 
-    // Function to handle task events
-    const handleTaskEvent = (event: string, task: Task) => {
-        switch (event) {
-            case 'taskCreated':
-                handleTaskCreated(task);
-                break;
-            case 'taskUpdated':
-                handleTaskUpdated(task);
-                break;
-            case 'taskDeleted':
-                handleTaskDeleted(task);
-                break;
-            default:
-                break;
-        }
-    };
+   
 
     // Event handlers for specific task events
     const handleTaskCreated = (task: Task) => {
@@ -255,10 +240,10 @@ const AgileBoard: React.FC = () => {
         }
     }, [filterName, selectedPriority]);
 
-    const handlePriorityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-        const selectedPriorityValue = event.target.value as 'Low' | 'High' | 'Medium' | 'All';
-        setSelectedPriority(selectedPriorityValue !== 'All' ? selectedPriorityValue : 'All');
-    };
+    // const handlePriorityChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    //     const selectedPriorityValue = event.target.value as 'Low' | 'High' | 'Medium' | 'All';
+    //     setSelectedPriority(selectedPriorityValue !== 'All' ? selectedPriorityValue : 'All');
+    // };
 
     const handleReset = () =>{
         setSelectedPriority('All')

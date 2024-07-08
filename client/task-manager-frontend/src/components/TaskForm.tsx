@@ -40,6 +40,7 @@ const validationSchema = yup.object().shape({
 });
 
 function parseDateString(value: any, originalValue: any) {
+  console.log(value);
   const parsedDate = originalValue ? new Date(originalValue) : null;
   return isValid(parsedDate) ? parsedDate : new Date('invalid');
 }
