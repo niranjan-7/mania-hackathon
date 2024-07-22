@@ -3,7 +3,6 @@ const { createTask, getTasks, updateTask, deleteTask, getTaskById } = require('.
 
 const router = express.Router();
 
-// Routes with authentication middleware
 router.post('/',  createTask);
 router.get('/',  getTasks);
 router.get('/:id', getTaskById);

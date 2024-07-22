@@ -180,7 +180,7 @@ const AgileBoard: React.FC = () => {
         } catch (error) {
             console.error('Error fetching tasks:', error);
         } finally {
-            setIsLoading(false); // Set loading state to false after fetching tasks
+            setIsLoading(false);
         }
     };
 
